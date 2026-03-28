@@ -535,6 +535,8 @@ function fmtC(n,d=2){return(n<0?'-':'')+'$'+fmt(Math.abs(n),d);}
 function parseD(s){if(!s)return null;const p=(s||'').split('/');if(p.length===3)return new Date(p[2],p[0]-1,p[1]);const d=new Date(s);return isNaN(d)?null:d;}
 function mlbl(k){const[y,m]=k.split('-');return MES[parseInt(m)-1]+' '+y.slice(2);}
 function byMonth(data,fn){const m={};data.forEach(r=>{if(!r.fecha)return;const k=r.fecha.getFullYear()+'-'+String(r.fecha.getMonth()+1).padStart(2,'0');if(!m[k])m[k]=[];m[k].push(fn(r));});return Object.entries(m).sort((a,b)=>a[0].localeCompare(b[0]));}
+// Devuelve solo los últimos N meses con datos reales
+function lastNMonths(data,fn,n=3){const all=byMonth(data,fn);return all.slice(-n);}
 
 // ── LOAD ──
 async function loadAll(){
@@ -685,18 +687,21 @@ function drawFallas(){
 
 // ══ P3 ══
 function renderP3(rep,base,bEx){
-  const local=new Set(rep.map(r=>r.cuenta).filter(c=>base.some(b=>b.cuenta===c))).size;
+  // Localizados: cuentas de rep que existen en base (con datos financieros)
+  const local=new Set(rep.map(r=>r.cuenta).filter(c=>baseRaw.some(b=>b.cuenta===c))).size;
+  // Atendidos: cuentas con validación exitosa (fuente de verdad)
   const atend=exitSet.size;
-  const noc=local-atend;
+  const noc=Math.max(0,local-atend);
   const ef=local?(atend/local*100).toFixed(1):0;
-  anim('cl-local',local);anim('cl-atend',atend);
+  anim('cl-local',local);
+  anim('cl-atend',atend);
   document.getElementById('cl-efect').textContent=ef+'%';
-  anim('cl-noc',Math.max(0,noc));
+  anim('cl-noc',noc);
 
-  // Apuesta prom/mes
+  // Apuesta prom/mes — solo últimos 3 meses reales, barra no línea
   dc('apmes');
-  const ap=byMonth(bEx,r=>r.apuesta).map(([k,v])=>{const f=v.filter(x=>x>0);return{k,v:f.length?f.reduce((a,b)=>a+b,0)/f.length:0};});
-  chts.apmes=new Chart(document.getElementById('c-apmes'),{type:'line',data:{labels:ap.map(e=>mlbl(e.k)),datasets:[{data:ap.map(e=>+e.v.toFixed(2)),borderColor:'#4a7fc1',backgroundColor:'rgba(74,127,193,.1)',fill:true,tension:.35,pointBackgroundColor:'#4a7fc1',pointRadius:4,pointHoverRadius:6}]},options:{...bOpts(),plugins:{...bOpts().plugins,tooltip:{...bOpts().plugins.tooltip,callbacks:{label:c=>` $${c.parsed.y.toFixed(2)}`}}}}});
+  const apAll=lastNMonths(bEx,r=>r.apuesta,3).map(([k,v])=>{const f=v.filter(x=>x>0);return{k,v:f.length?f.reduce((a,b)=>a+b,0)/f.length:0};});
+  chts.apmes=new Chart(document.getElementById('c-apmes'),{type:'bar',data:{labels:apAll.map(e=>mlbl(e.k)),datasets:[{data:apAll.map(e=>+e.v.toFixed(2)),backgroundColor:'rgba(74,127,193,.75)',borderRadius:4,borderSkipped:false}]},options:{...bOpts(),plugins:{...bOpts().plugins,tooltip:{...bOpts().plugins.tooltip,callbacks:{label:c=>` $${c.parsed.y.toFixed(2)}`}}}}});
 
   // Efectividad por nivel (antes "por proveedor")
   dc('efprov');
@@ -731,17 +736,18 @@ function renderP4(base,bEx){
   kn.textContent=(netT<0?'-':'')+'$'+fmt(Math.abs(netT),1);
   kn.style.color=netT>=0?'var(--pos)':'var(--neg)';
   document.getElementById('ib-ap').textContent=avgAp>0?'$'+fmt(avgAp,2):'—';
-  document.getElementById('ib-jug').textContent=new Set(bEx.map(r=>r.cuenta)).size;
-  document.getElementById('ib-coinpc').textContent=fmt(coinPC,0);
+  // Clientes únicos exitosos = exitSet.size (fuente de verdad desde hoja de alertas)
+  document.getElementById('ib-jug').textContent=exitSet.size;
+  document.getElementById('ib-coinpc').textContent=exitSet.size?fmt(coinT/exitSet.size,0):'—';
 
   // Coin/mes
   dc('coinmes');
-  const cm=byMonth(bEx,r=>r.coin).map(([k,v])=>({k,v:v.reduce((a,b)=>a+b,0)}));
+  const cm=lastNMonths(bEx,r=>r.coin,3).map(([k,v])=>({k,v:v.reduce((a,b)=>a+b,0)}));
   chts.coinmes=new Chart(document.getElementById('c-coinmes'),{type:'bar',data:{labels:cm.map(e=>mlbl(e.k)),datasets:[{data:cm.map(e=>e.v),backgroundColor:'rgba(201,168,76,.75)',borderRadius:4,borderSkipped:false}]},options:{...bOpts(),plugins:{...bOpts().plugins,tooltip:{...bOpts().plugins.tooltip,callbacks:{label:c=>` Coin: ${c.parsed.y.toLocaleString('es-MX')}`}}}}});
 
   // Netwin/mes
   dc('netmes');
-  const nw=byMonth(bEx,r=>r.netwin).map(([k,v])=>({k,v:v.reduce((a,b)=>a+b,0)}));
+  const nw=lastNMonths(bEx,r=>r.netwin,3).map(([k,v])=>({k,v:v.reduce((a,b)=>a+b,0)}));
   chts.netmes=new Chart(document.getElementById('c-netmes'),{type:'bar',data:{labels:nw.map(e=>mlbl(e.k)),datasets:[{data:nw.map(e=>e.v),backgroundColor:nw.map(e=>e.v>=0?'rgba(58,158,111,.75)':'rgba(185,74,74,.75)'),borderRadius:4,borderSkipped:false}]},options:{...bOpts(),plugins:{...bOpts().plugins,tooltip:{...bOpts().plugins.tooltip,callbacks:{label:c=>` $${c.parsed.y.toLocaleString('es-MX')}`}}}}});
 
   // Top coin
@@ -772,7 +778,7 @@ function renderP4(base,bEx){
     return`<tr><td>${mlbl(k)}</td><td>${d.cli.size}</td><td class="mono gold">${ap>0?'$'+fmtN(ap,2):'—'}</td><td>${fmtN(cp,0)}</td><td>${fmtN(d.coin,0)}</td><td class="${d.net>=0?'pos':'neg'}">$${fmtN(d.net,2)}</td><td class="${np>=0?'pos':'neg'}">$${fmtN(np,2)}</td></tr>`;
   }).join('');
   const tav=ta.length?ta.reduce((a,b)=>a+b,0)/ta.length:0,tcp=tcnt?tco/tcnt:0,tnp=tcnt?tn/tcnt:0;
-  document.getElementById('mFoot').innerHTML=`<tr style="font-weight:600;color:var(--white)"><td>TOTAL</td><td>${tc2.size}</td><td class="mono gold">${tav>0?'$'+fmtN(tav,2):'—'}</td><td>${fmtN(tcp,0)}</td><td>${fmtN(tco,0)}</td><td class="${tn>=0?'pos':'neg'}">$${fmtN(tn,2)}</td><td class="${tnp>=0?'pos':'neg'}">$${fmtN(tnp,2)}</td></tr>`;
+  document.getElementById('mFoot').innerHTML=`<tr style="font-weight:600;color:var(--white)"><td>TOTAL</td><td>${exitSet.size}</td><td class="mono gold">${tav>0?'$'+fmtN(tav,2):'—'}</td><td>${fmtN(tcp,0)}</td><td>${fmtN(tco,0)}</td><td class="${tn>=0?'pos':'neg'}">$${fmtN(tn,2)}</td><td class="${tnp>=0?'pos':'neg'}">$${fmtN(tnp,2)}</td></tr>`;
 }
 
 // ══ P5 ══
@@ -890,7 +896,7 @@ function renderP7(bEx){
 
   // Coin total por mes — solo datos reales de bEx
   dc('tend-coin');
-  const coinMes=byMonth(bEx,r=>r.coin).map(([k,v])=>({k,v:v.reduce((a,b)=>a+b,0)}));
+  const coinMes=lastNMonths(bEx,r=>r.coin,3).map(([k,v])=>({k,v:v.reduce((a,b)=>a+b,0)}));
   chts['tend-coin']=new Chart(document.getElementById('c-tend-coin'),{type:'bar',
     data:{labels:coinMes.map(e=>mlbl(e.k)),
     datasets:[{data:coinMes.map(e=>e.v),backgroundColor:'rgba(201,168,76,.75)',borderRadius:4,borderSkipped:false}]},
@@ -898,7 +904,7 @@ function renderP7(bEx){
 
   // Clientes únicos exitosos por mes — solo datos reales
   dc('tend-efect');
-  const cliMes=byMonth(bEx,r=>r.cuenta).map(([k,v])=>({k,v:new Set(v).size}));
+  const cliMes=lastNMonths(bEx,r=>r.cuenta,3).map(([k,v])=>({k,v:new Set(v).size}));
   chts['tend-efect']=new Chart(document.getElementById('c-tend-efect'),{type:'bar',
     data:{labels:cliMes.map(e=>mlbl(e.k)),
     datasets:[{data:cliMes.map(e=>e.v),backgroundColor:'rgba(58,158,111,.75)',borderRadius:4,borderSkipped:false}]},
