@@ -532,7 +532,25 @@ function pn(v){const n=parseFloat((v||'').toString().replace(/[^0-9.\-]/g,''));r
 function fmt(n,d=0){if(n===null||n===undefined)return'—';const a=Math.abs(n);let s;if(a>=1e6)s=(n/1e6).toFixed(1)+'M';else if(a>=1e3)s=(n/1e3).toFixed(1)+'K';else s=n.toFixed(d);return s;}
 function fmtN(n,d=2){return n===undefined?'—':n.toLocaleString('es-MX',{minimumFractionDigits:d,maximumFractionDigits:d});}
 function fmtC(n,d=2){return(n<0?'-':'')+'$'+fmt(Math.abs(n),d);}
-function parseD(s){if(!s)return null;const p=(s||'').split('/');if(p.length===3)return new Date(p[2],p[0]-1,p[1]);const d=new Date(s);return isNaN(d)?null:d;}
+function parseD(s){
+  if(!s)return null;
+  const str=(s||'').toString().trim();
+  // Formato ISO del input date: YYYY-MM-DD
+  if(/^\d{4}-\d{2}-\d{2}$/.test(str)){
+    const[y,m,d]=str.split('-').map(Number);
+    return new Date(y,m-1,d);
+  }
+  // Formato Google Sheets: D/M/YYYY o DD/MM/YYYY
+  const p=str.split('/');
+  if(p.length===3){
+    const d=parseInt(p[0]),m=parseInt(p[1]),y=parseInt(p[2]);
+    if(d>=1&&d<=31&&m>=1&&m<=12&&y>=2020&&y<=2030)
+      return new Date(y,m-1,d);
+  }
+  // Fallback
+  const dt=new Date(str);
+  return isNaN(dt)?null:dt;
+}
 function mlbl(k){const[y,m]=k.split('-');return MES[parseInt(m)-1]+' '+y.slice(2);}
 function byMonth(data,fn){const m={};data.forEach(r=>{if(!r.fecha)return;const k=r.fecha.getFullYear()+'-'+String(r.fecha.getMonth()+1).padStart(2,'0');if(!m[k])m[k]=[];m[k].push(fn(r));});return Object.entries(m).sort((a,b)=>a[0].localeCompare(b[0]));}
 // Devuelve solo los últimos N meses con datos reales
@@ -579,7 +597,9 @@ function buildBase({h,rows}){
 // ── FILTERS ──
 function applyF(){
   const fv=document.getElementById('dFrom').value,tv=document.getElementById('dTo').value;
-  const from=fv?new Date(fv):null,to=tv?new Date(tv):null;
+  // parseD maneja tanto YYYY-MM-DD (del input) como DD/MM/YYYY (de la hoja)
+  const from=fv?parseD(fv):null;
+  const to=tv?parseD(tv):null;
   if(to)to.setHours(23,59,59);
   const niv=document.getElementById('selNivel').value;
 
