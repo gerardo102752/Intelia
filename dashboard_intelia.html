@@ -187,11 +187,11 @@ tbody td{padding:7px 11px;color:var(--text);}
     <div class="bmark">IN</div>
     <div class="btext">
       <h1>INTELIA — Reporte Ejecutivo de Implementación</h1>
-      <p>Classic ≥ $25 MXN · Actualización automática cada 5 min</p>
+      <p>Alertas activas · Actualización automática cada 5 min</p>
     </div>
   </div>
   <div class="hright">
-    <span class="pill on">CLASSIC ≥ $25</span>
+    <span class="pill on">TODAS LAS ALERTAS</span>
     <span id="lastUpd" style="font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace;">—</span>
     <button class="btn btn-p spinning" id="btnRef" onclick="loadAll()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
@@ -216,7 +216,7 @@ tbody td{padding:7px 11px;color:var(--text);}
   <div class="tb-g"><span class="tb-lbl">Desde</span><input type="date" id="dFrom"></div>
   <div class="tb-g"><span class="tb-lbl">Hasta</span><input type="date" id="dTo"></div>
   <div class="tb-g"><span class="tb-lbl">Nivel</span>
-    <select id="selNivel"><option value="">Todos</option><option value="Classic">Classic</option><option value="Platinum">Platinum</option><option value="The One">The One</option></select>
+    <select id="selNivel"><option value="">Todos</option><option value="Black">Black</option><option value="Classic">Classic</option><option value="Diamond">Diamond</option><option value="Gold">Gold</option><option value="Platinum">Platinum</option><option value="The One">The One</option></select>
   </div>
   <button class="btn btn-s" onclick="applyF()">Aplicar</button>
   <button class="btn btn-s" onclick="clearF()">Limpiar</button>
@@ -234,7 +234,7 @@ tbody td{padding:7px 11px;color:var(--text);}
   <div>
     <div class="sec"><span class="sec-icon">🚀</span>Inicio de Implementación — Resumen Operativo</div>
     <div class="g5">
-      <div class="kpi c1"><div class="kpi-lbl">Total Alertas Generadas</div><div class="kpi-val" id="p1-alertas">—</div><div class="kpi-sub">Clientes Classic ≥ $25</div></div>
+      <div class="kpi c1"><div class="kpi-lbl">Total Alertas Generadas</div><div class="kpi-val" id="p1-alertas">—</div><div class="kpi-sub">Todas las alertas activas</div></div>
       <div class="kpi c2"><div class="kpi-lbl">Clientes Localizados</div><div class="kpi-val" id="p1-local">—</div><div class="kpi-sub">Con cuenta en base de datos</div></div>
       <div class="kpi c3"><div class="kpi-lbl">Clientes Atendidos</div><div class="kpi-val" id="p1-atend">—</div><div class="kpi-sub">Validación = Exitosa</div></div>
       <div class="kpi c4"><div class="kpi-lbl">Equipos / Cuentas</div><div class="kpi-val" id="p1-equip">—</div><div class="kpi-sub">Cuentas únicas impactadas</div></div>
@@ -329,7 +329,7 @@ tbody td{padding:7px 11px;color:var(--text);}
       <input class="srch" id="srchC" placeholder="Buscar cliente…" oninput="filterClientes()">
     </div>
     <div class="twrap">
-      <table><thead><tr><th>Cuenta</th><th>Nombre</th><th>Nivel</th><th>Jugadas</th><th>Coin Total</th><th>Apuesta Prom.</th><th>Netwin</th><th>Estatus</th></tr></thead>
+      <table><thead><tr><th>Cuenta</th><th>Nombre</th><th>Nivel</th><th>Apuesta Media</th><th>Coin Total</th><th>Netwin</th><th>Estatus</th></tr></thead>
       <tbody id="tClientes"></tbody></table>
     </div>
     <div class="pag" id="pagC"></div>
@@ -344,7 +344,7 @@ tbody td{padding:7px 11px;color:var(--text);}
       <div class="kpi c1"><div class="kpi-lbl">Coin In Total</div><div class="kpi-val" id="ib-coin">—</div><div class="kpi-sub">Clientes exitosos</div></div>
       <div class="kpi c2"><div class="kpi-lbl">Netwin Total</div><div class="kpi-val" id="ib-net">—</div><div class="kpi-sub">Resultado neto</div></div>
       <div class="kpi c3"><div class="kpi-lbl">Apuesta Promedio</div><div class="kpi-val" id="ib-ap">—</div><div class="kpi-sub">Promedio general</div></div>
-      <div class="kpi c4"><div class="kpi-lbl">Jugadas Totales</div><div class="kpi-val" id="ib-jug">—</div><div class="kpi-sub">Clientes exitosos</div></div>
+      <div class="kpi c4"><div class="kpi-lbl">Clientes Únicos Exitosos</div><div class="kpi-val" id="ib-jug">—</div><div class="kpi-sub">Cuentas únicas atendidas</div></div>
       <div class="kpi c5"><div class="kpi-lbl">Coin Promedio/Cliente</div><div class="kpi-val" id="ib-coinpc">—</div><div class="kpi-sub">Por cliente exitoso</div></div>
     </div>
   </div>
@@ -369,7 +369,7 @@ tbody td{padding:7px 11px;color:var(--text);}
     <div class="sec">Resumen Mensual Completo</div>
     <div class="twrap">
       <table class="mtbl" id="tMes">
-        <thead><tr><th>Mes</th><th>Clientes</th><th>Jugadas</th><th>Coin Prom.</th><th>Coin Total</th><th>Apuesta Prom.</th><th>Netwin Total</th><th>Netwin Prom.</th></tr></thead>
+        <thead><tr><th>Mes</th><th>Clientes</th><th>Apuesta Media</th><th>Coin Prom.</th><th>Coin Total</th><th>Netwin Total</th><th>Netwin Prom.</th></tr></thead>
         <tbody id="mBody"></tbody>
         <tfoot id="mFoot"></tfoot>
       </table>
@@ -446,7 +446,7 @@ tbody td{padding:7px 11px;color:var(--text);}
 
   <!-- Conclusión ejecutiva -->
   <div class="conclusion">
-    <h3>👔 Conclusión Ejecutiva (máx. 5 líneas — para Juan David)</h3>
+    <h3>👔 Conclusión Ejecutiva</h3>
     <div class="conclusion-grid">
       <div class="c-item">
         <div class="c-item-q">¿Vale la pena?</div>
@@ -506,7 +506,7 @@ tbody td{padding:7px 11px;color:var(--text);}
       <input class="srch" id="srchEv" placeholder="Buscar…" oninput="filterEv()">
     </div>
     <div class="twrap">
-      <table><thead><tr><th>Fecha</th><th>Cuenta</th><th>Nombre</th><th>Nivel</th><th>Jugadas</th><th>Coin</th><th>Apuesta</th><th>Netwin</th></tr></thead>
+      <table><thead><tr><th>Fecha</th><th>Cuenta</th><th>Nombre</th><th>Nivel</th><th>Ap. Media Cuenta</th><th>Coin</th><th>Apuesta Mes</th><th>Netwin</th></tr></thead>
       <tbody id="tEv"></tbody></table>
     </div>
     <div class="pag" id="pagEv"></div>
@@ -562,11 +562,13 @@ async function loadAll(){
 function buildRep({h,rows}){
   const iN=ci(h,'Nivel'),iA=ci(h,'Apuesta'),iV=ci(h,'Validacion'),iCu=ci(h,'Cuenta'),
         iCl=ci(h,'Cliente'),iPr=ci(h,'Proveedo'),iCo=ci(h,'Comentario'),
-        iCr=ci(h,'Tipo de criterio'),iNep=ci(h,'NEP');
-  return rows.filter(r=>N(r[iN]||'').includes('CLASSIC')&&pn(r[iA])>=25).map(r=>({
+        iCr=ci(h,'Tipo de criterio'),iNep=ci(h,'NEP'),iLds=ci(h,'LDS');
+  // Sin filtro hardcoded: toma TODAS las alertas de la hoja tal como llegan
+  return rows.filter(r=>(r[iCu]||'').trim()).map(r=>({
     nep:r[iNep]||'',cuenta:(r[iCu]||'').trim(),cliente:r[iCl]||'',
     proveedor:(r[iPr]||'').trim(),nivel:r[iN]||'',apuesta:pn(r[iA]),
-    validacion:(r[iV]||'').trim(),comentario:r[iCo]||'',criterio:r[iCr]||''
+    validacion:(r[iV]||'').trim(),comentario:r[iCo]||'',criterio:r[iCr]||'',
+    lds:r[iLds]||''
   }));
 }
 function buildBase({h,rows}){
@@ -585,13 +587,15 @@ function applyF(){
   const from=fv?new Date(fv):null,to=tv?new Date(tv):null;
   if(to)to.setHours(23,59,59);
   const niv=document.getElementById('selNivel').value;
+  // filtRep: sin filtro de nivel (la hoja ya viene pre-filtrada por Classic ≥$25)
   filtRep=repRaw;
   filtBase=baseRaw.filter(r=>{
     if(from&&r.fecha<from)return false;if(to&&r.fecha>to)return false;
     if(niv&&N(r.nivel)!==N(niv))return false;return true;
   });
-  exitSet=new Set(filtRep.filter(r=>{const v=N(r.validacion);return v.includes('EXITOSA')||v.includes('CONCRETADA')||v.includes('EXITOSO');}).map(r=>r.cuenta));
-  const bEx=filtBase.filter(r=>exitSet.has(r.cuenta));
+  // exitSet: cuentas únicas con validación exitosa en rep — match normalizado
+  exitSet=new Set(filtRep.filter(r=>{const v=N(r.validacion);return v.includes('EXITOSA')||v.includes('CONCRETADA')||v.includes('EXITOSO');}).map(r=>r.cuenta.trim()));
+  const bEx=filtBase.filter(r=>exitSet.has(r.cuenta.trim()));
   document.getElementById('tb-tot').textContent=filtRep.length;
   document.getElementById('tb-exit').textContent=exitSet.size;
   document.getElementById('tb-base').textContent=filtBase.length;
@@ -712,7 +716,7 @@ function renderP3(rep,base,bEx){
 function filterClientes(){const q=(document.getElementById('srchC').value||'').toLowerCase();tClientesFilt=q?tClientesData.filter(r=>(r.nombre+r.cuenta+r.nivel).toLowerCase().includes(q)):tClientesData;tClientesPage=1;drawClientes();}
 function drawClientes(){
   const page=tClientesFilt.slice((tClientesPage-1)*PG,tClientesPage*PG);
-  document.getElementById('tClientes').innerHTML=page.map(r=>`<tr><td class="mono">${r.cuenta}</td><td>${r.nombre}</td><td>${r.nivel}</td><td class="mono">${r.jug.toLocaleString('es-MX')}</td><td class="mono gold">${fmtN(r.coin,0)}</td><td class="mono">$${r.avgAp.toFixed(2)}</td><td class="mono ${r.net>=0?'pos':'neg'}">$${fmtN(r.net,2)}</td><td><span class="badge b-ok">Exitoso</span></td></tr>`).join('');
+  document.getElementById('tClientes').innerHTML=page.map(r=>`<tr><td class="mono">${r.cuenta}</td><td>${r.nombre}</td><td>${r.nivel}</td><td class="mono gold">$${r.avgAp.toFixed(2)}</td><td class="mono">${fmtN(r.coin,0)}</td><td class="mono ${r.net>=0?'pos':'neg'}">$${fmtN(r.net,2)}</td><td><span class="badge b-ok">Exitoso</span></td></tr>`).join('');
   drawPag('pagC',tClientesFilt.length,tClientesPage,p=>{tClientesPage=p;drawClientes();});
 }
 
@@ -728,7 +732,8 @@ function renderP4(bEx){
   document.getElementById('ib-coin').textContent=fmt(coinT,0);
   const kn=document.getElementById('ib-net');kn.textContent=(netT<0?'-':'')+'$'+fmt(Math.abs(netT),1);kn.style.color=netT>=0?'var(--pos)':'var(--neg)';
   document.getElementById('ib-ap').textContent='$'+fmt(avgAp,2);
-  document.getElementById('ib-jug').textContent=fmt(jugT,0);
+  const uniCli=new Set(bEx.map(r=>r.cuenta)).size;
+  document.getElementById('ib-jug').textContent=uniCli;
   document.getElementById('ib-coinpc').textContent=fmt(coinPC,0);
 
   // Coin/mes
@@ -753,9 +758,9 @@ function renderP4(bEx){
   const rows=Object.entries(mm).sort((a,b)=>a[0].localeCompare(b[0]));
   let tc2=new Set(),tj=0,tco=0,ta=[],tn=0,tcnt=0;
   bEx.forEach(r=>{tc2.add(r.cuenta);tj+=r.jugadas;tco+=r.coin;if(r.apuesta>0)ta.push(r.apuesta);tn+=r.netwin;tcnt++;});
-  document.getElementById('mBody').innerHTML=rows.map(([k,d])=>{const ap=d.aps.length?d.aps.reduce((a,b)=>a+b,0)/d.aps.length:0;const cp=d.cnt?d.coin/d.cnt:0,np=d.cnt?d.net/d.cnt:0;return`<tr><td>${mlbl(k)}</td><td>${d.cli.size}</td><td>${d.jug.toLocaleString('es-MX')}</td><td>${fmtN(cp,0)}</td><td>${fmtN(d.coin,0)}</td><td>$${fmtN(ap,2)}</td><td class="${d.net>=0?'pos':'neg'}">$${fmtN(d.net,2)}</td><td class="${np>=0?'pos':'neg'}">$${fmtN(np,2)}</td></tr>`;}).join('');
+  document.getElementById('mBody').innerHTML=rows.map(([k,d])=>{const ap=d.aps.length?d.aps.reduce((a,b)=>a+b,0)/d.aps.length:0;const cp=d.cnt?d.coin/d.cnt:0,np=d.cnt?d.net/d.cnt:0;return`<tr><td>${mlbl(k)}</td><td>${d.cli.size}</td><td class="mono gold">$${fmtN(ap,2)}</td><td>${fmtN(cp,0)}</td><td>${fmtN(d.coin,0)}</td><td class="${d.net>=0?'pos':'neg'}">$${fmtN(d.net,2)}</td><td class="${np>=0?'pos':'neg'}">$${fmtN(np,2)}</td></tr>`;}).join('');
   const tav=ta.length?ta.reduce((a,b)=>a+b,0)/ta.length:0,tcp=tcnt?tco/tcnt:0,tnp=tcnt?tn/tcnt:0;
-  document.getElementById('mFoot').innerHTML=`<tr><td>TOTAL</td><td>${tc2.size}</td><td>${tj.toLocaleString('es-MX')}</td><td>${fmtN(tcp,0)}</td><td>${fmtN(tco,0)}</td><td>$${fmtN(tav,2)}</td><td class="${tn>=0?'pos':'neg'}">$${fmtN(tn,2)}</td><td class="${tnp>=0?'pos':'neg'}">$${fmtN(tnp,2)}</td></tr>`;
+  document.getElementById('mFoot').innerHTML=`<tr style="font-weight:600;color:var(--white)"><td>TOTAL</td><td>${tc2.size}</td><td class="mono gold">$${fmtN(tav,2)}</td><td>${fmtN(tcp,0)}</td><td>${fmtN(tco,0)}</td><td class="${tn>=0?'pos':'neg'}">$${fmtN(tn,2)}</td><td class="${tnp>=0?'pos':'neg'}">$${fmtN(tnp,2)}</td></tr>`;
 }
 
 // ══ P5 ══
@@ -824,7 +829,13 @@ function renderP6(rep,base,bEx){
   if(rojo.length===0)rojo.push('Sin riesgos críticos detectados en este período');
 
   // Hallazgos amarillos
-  const amarillo=['Capacitar a gestores en tiempos de contacto y argumentación','Revisar clientes sin comentario para mejorar trazabilidad',`Analizar los ${noVal} registros sin validación para completar gestión`,'Ajuste técnico: estandarizar valores de campo VALIDACION','Mejora operativa: definir SLA de respuesta por tipo de alerta'];
+  const amarillo=[];
+  amarillo.push('Capacitar a gestores en tiempos de contacto y argumentación');
+  if(noVal>0)amarillo.push(`Completar ${noVal} registros sin validación para mejorar trazabilidad`);
+  else amarillo.push('Revisar clientes sin comentario para mejorar trazabilidad');
+  amarillo.push('Estandarizar valores del campo VALIDACIÓN en el proceso operativo');
+  amarillo.push('Definir SLA de respuesta por tipo de alerta (máx. 24h recomendado)');
+  if(fall>0)amarillo.push(`Revisar ${fall} gestiones fallidas para identificar patrones de mejora`);
 
   document.getElementById('h-verde').innerHTML=verde.map(t=>`<li>${t}</li>`).join('');
   document.getElementById('h-rojo').innerHTML=rojo.map(t=>`<li>${t}</li>`).join('');
@@ -847,13 +858,14 @@ function renderP6(rep,base,bEx){
   chts.nivel=new Chart(document.getElementById('c-nivel'),{type:'bar',data:{labels:nve.map(e=>e[0]),datasets:[{data:nve.map(e=>e[1]),backgroundColor:nve.map(e=>e[1]>=0?'rgba(58,158,111,.75)':'rgba(185,74,74,.75)'),borderRadius:4,borderSkipped:false}]},options:{...bOpts(),plugins:{...bOpts().plugins,tooltip:{...bOpts().plugins.tooltip,callbacks:{label:c=>` $${c.parsed.y.toLocaleString('es-MX')}`}}}}});
 
   // Conclusión ejecutiva
+  // Conclusión ejecutiva — máx 5 líneas
   const valelapena=pct>=50?`Sí. Con ${pct.toFixed(1)}% de efectividad y ${exit} clientes atendidos, el sistema genera valor medible.`:`En desarrollo. ${pct.toFixed(1)}% de efectividad actual — se requiere ajuste operativo para maximizar retorno.`;
-  const impacto=`El impacto real está en los ${exit} clientes exitosos que representan el ${pctCoin.toFixed(1)}% del Coin In total. Netwin acumulado: $${fmtN(netEx,0)}.`;
-  const decision=pct>=50?`Escalar la operación: aumentar cobertura de proveedores y reforzar seguimiento en alertas sin gestión.`:`Prioridad: reducir los ${noVal} casos sin validación y los ${fall} fallidos antes de escalar.`;
+  const impacto=`${exit} clientes exitosos generan el ${pctCoin.toFixed(1)}% del Coin In total. Netwin acumulado: $${fmtN(netEx,0)}.`;
+  const decision=pct>=50?`Escalar operación: aumentar cobertura y reforzar seguimiento en alertas sin gestión.`:`Prioridad: reducir los ${noVal} casos sin validación y los ${fall} fallidos antes de escalar.`;
   document.getElementById('concl-1').textContent=valelapena;
   document.getElementById('concl-2').textContent=impacto;
   document.getElementById('concl-3').textContent=decision;
-  document.getElementById('concl-verdict').textContent=`INTELIA ha generado ${exit} gestiones exitosas sobre ${total} alertas Classic ≥$25 (${pct.toFixed(1)}% efectividad), aportando ${pctCoin.toFixed(1)}% del Coin In total con un Netwin de $${fmtN(netEx,0)}. ${pct>=50?'Los resultados justifican escalar la implementación y aumentar cobertura.':'Se recomienda atender primero los gaps operativos (gestiones sin validación, criterios sin registro) antes de ampliar alcance.'}`;
+  document.getElementById('concl-verdict').textContent=`INTELIA: ${exit} gestiones exitosas / ${total} alertas (${pct.toFixed(1)}%). Coin In aportado: ${pctCoin.toFixed(1)}% del total. Netwin: $${fmtN(netEx,0)}. ${pct>=50?'Resultados justifican escalar la implementación.':'Atender gaps operativos antes de ampliar alcance.'}`;
 }
 
 // ══ P7 ══
@@ -875,9 +887,9 @@ function renderP7(bEx){
 
   // Pasos
   const noVal=filtRep.filter(r=>!r.validacion.trim()).length;
-  document.getElementById('ev-corto').textContent=`1. Completar los ${noVal} registros sin validación.\n2. Estandarizar campo de comentario en el proceso operativo.\n3. Revisión semanal de alertas pendientes con gestores.`;
-  document.getElementById('ev-medio').textContent=`1. Ampliar cobertura a más proveedores y niveles de cliente.\n2. Automatizar alertas de seguimiento para casos pendientes.\n3. Integrar comparativo vs promedio histórico de sala.`;
-  document.getElementById('ev-rec').textContent=`• Definir meta de efectividad ≥60% por período.\n• Crear SLA de respuesta: máx. 24h por alerta generada.\n• Revisar umbrales de Apuesta (actual ≥$25) según resultados.`;
+  document.getElementById('ev-corto').textContent=`1. Completar los ${noVal} registros sin validación.\n2. Estandarizar comentario de gestión en proceso operativo.\n3. Revisión semanal de alertas pendientes con gestores.`;
+  document.getElementById('ev-medio').textContent=`1. Ampliar cobertura a más proveedores y niveles.\n2. Automatizar alertas de seguimiento para casos pendientes.\n3. Integrar comparativo vs promedio histórico de sala.`;
+  document.getElementById('ev-rec').textContent=`• Meta de efectividad ≥60% por período.\n• SLA de respuesta: máx. 24h por alerta generada.\n• Revisar umbrales de Apuesta según resultados acumulados.`;
 
   // Tabla detalle exitosos
   tEvData=bEx;tEvFilt=bEx;tEvPage=1;
@@ -887,7 +899,13 @@ function renderP7(bEx){
 function filterEv(){const q=(document.getElementById('srchEv').value||'').toLowerCase();tEvFilt=q?tEvData.filter(r=>(r.nombre+r.cuenta+r.nivel+r.fechaStr).toLowerCase().includes(q)):tEvData;tEvPage=1;drawEv();}
 function drawEv(){
   const page=tEvFilt.slice((tEvPage-1)*PG,tEvPage*PG);
-  document.getElementById('tEv').innerHTML=page.map(r=>`<tr><td class="mono">${r.fechaStr}</td><td class="mono">${r.cuenta}</td><td>${r.nombre}</td><td>${r.nivel}</td><td class="mono">${r.jugadas.toLocaleString('es-MX')}</td><td class="mono gold">${fmtN(r.coin,0)}</td><td class="mono">$${r.apuesta.toFixed(2)}</td><td class="mono ${r.netwin>=0?'pos':'neg'}">$${fmtN(r.netwin,2)}</td></tr>`).join('');
+  // Calcular apuesta media por cuenta en el set completo
+  const apMap={};tEvData.forEach(r=>{if(!apMap[r.cuenta])apMap[r.cuenta]=[];if(r.apuesta>0)apMap[r.cuenta].push(r.apuesta);});
+  document.getElementById('tEv').innerHTML=page.map(r=>{
+    const aps=apMap[r.cuenta]||[];
+    const med=aps.length?aps.reduce((a,b)=>a+b,0)/aps.length:r.apuesta;
+    return`<tr><td class="mono">${r.fechaStr}</td><td class="mono">${r.cuenta}</td><td>${r.nombre}</td><td>${r.nivel}</td><td class="mono gold">$${med.toFixed(2)}</td><td class="mono">${fmtN(r.coin,0)}</td><td class="mono">$${r.apuesta.toFixed(2)}</td><td class="mono ${r.netwin>=0?'pos':'neg'}">$${fmtN(r.netwin,2)}</td></tr>`;
+  }).join('');
   drawPag('pagEv',tEvFilt.length,tEvPage,p=>{tEvPage=p;drawEv();});
 }
 
