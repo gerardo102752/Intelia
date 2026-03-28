@@ -224,6 +224,7 @@ tbody td{padding:7px 11px;color:var(--text);}
   <span class="tb-stat">Alertas: <strong id="tb-tot">—</strong></span>
   <span class="tb-stat">Exitosas: <strong id="tb-exit">—</strong></span>
   <span class="tb-stat">Base datos: <strong id="tb-base">—</strong></span>
+  <span class="tb-stat">Reg. exitosos base: <strong id="tb-bex">—</strong></span>
 </div>
 
 <main>
@@ -233,12 +234,11 @@ tbody td{padding:7px 11px;color:var(--text);}
 <div id="p1" class="page on">
   <div>
     <div class="sec"><span class="sec-icon">🚀</span>Inicio de Implementación — Resumen Operativo</div>
-    <div class="g5">
+    <div class="g4">
       <div class="kpi c1"><div class="kpi-lbl">Total Alertas Generadas</div><div class="kpi-val" id="p1-alertas">—</div><div class="kpi-sub">Todas las alertas activas</div></div>
-      <div class="kpi c2"><div class="kpi-lbl">Clientes Localizados</div><div class="kpi-val" id="p1-local">—</div><div class="kpi-sub">Con cuenta en base de datos</div></div>
-      <div class="kpi c3"><div class="kpi-lbl">Clientes Atendidos</div><div class="kpi-val" id="p1-atend">—</div><div class="kpi-sub">Validación = Exitosa</div></div>
-      <div class="kpi c4"><div class="kpi-lbl">Equipos / Cuentas</div><div class="kpi-val" id="p1-equip">—</div><div class="kpi-sub">Cuentas únicas impactadas</div></div>
-      <div class="kpi c5"><div class="kpi-lbl">Proveedores Activos</div><div class="kpi-val" id="p1-provs">—</div><div class="kpi-sub">Proveedores con alertas</div></div>
+      <div class="kpi c4"><div class="kpi-lbl">Alertas No Exitosas</div><div class="kpi-val" id="p1-noex">—</div><div class="kpi-sub">No concretadas</div></div>
+      <div class="kpi c2"><div class="kpi-lbl">Alertas Exitosas</div><div class="kpi-val" id="p1-atend">—</div><div class="kpi-sub">Validación = Exitosa</div></div>
+      <div class="kpi c3"><div class="kpi-lbl">% Efectividad</div><div class="kpi-val" id="p1-efect">—</div><div class="kpi-sub">Exitosas vs total</div></div>
     </div>
   </div>
 
@@ -248,18 +248,8 @@ tbody td{padding:7px 11px;color:var(--text);}
       <div class="cbox" style="height:230px"><canvas id="c-valid"></canvas></div>
     </div>
     <div class="card">
-      <div class="sec">Alertas por Proveedor</div>
-      <div class="cbox" style="height:230px"><canvas id="c-prov"></canvas></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="sec">Alcance por Proveedor — Detalle</div>
-    <div class="twrap">
-      <table>
-        <thead><tr><th>Proveedor</th><th>Alertas</th><th>Cuentas Únicas</th><th>Apuesta Prom.</th><th>% del Total</th><th>Estatus</th></tr></thead>
-        <tbody id="tProv"></tbody>
-      </table>
+      <div class="sec">Tipo de Criterio — Distribución</div>
+      <div class="cbox" style="height:230px"><canvas id="c-crit-p1"></canvas></div>
     </div>
   </div>
 </div>
@@ -559,13 +549,15 @@ async function loadAll(){
   btn.classList.remove('spinning');
 }
 
+// Normaliza cuentas: elimina puntos, comas, espacios para match robusto
+function normCta(s){return(s||'').replace(/[\s.,]/g,'').trim();}
+
 function buildRep({h,rows}){
   const iN=ci(h,'Nivel'),iA=ci(h,'Apuesta'),iV=ci(h,'Validacion'),iCu=ci(h,'Cuenta'),
         iCl=ci(h,'Cliente'),iPr=ci(h,'Proveedo'),iCo=ci(h,'Comentario'),
         iCr=ci(h,'Tipo de criterio'),iNep=ci(h,'NEP'),iLds=ci(h,'LDS');
-  // Sin filtro hardcoded: toma TODAS las alertas de la hoja tal como llegan
   return rows.filter(r=>(r[iCu]||'').trim()).map(r=>({
-    nep:r[iNep]||'',cuenta:(r[iCu]||'').trim(),cliente:r[iCl]||'',
+    nep:r[iNep]||'',cuenta:normCta(r[iCu]),cliente:r[iCl]||'',
     proveedor:(r[iPr]||'').trim(),nivel:r[iN]||'',apuesta:pn(r[iA]),
     validacion:(r[iV]||'').trim(),comentario:r[iCo]||'',criterio:r[iCr]||'',
     lds:r[iLds]||''
@@ -576,7 +568,7 @@ function buildBase({h,rows}){
         iCo=ci(h,'Coin'),iJ=ci(h,'jugadas'),iNw=ci(h,'Netwin'),iAp=ci(h,'Apuesta');
   return rows.map(r=>({
     fecha:parseD(r[iF]||''),fechaStr:r[iF]||'',nivel:r[iNv]||'',
-    cuenta:(r[iCu]||'').trim(),nombre:r[iNo]||'',
+    cuenta:normCta(r[iCu]),nombre:r[iNo]||'',
     coin:pn(r[iCo]),jugadas:pn(r[iJ]),netwin:pn(r[iNw]),apuesta:pn(r[iAp])
   })).filter(r=>r.fecha&&!isNaN(r.fecha));
 }
@@ -587,19 +579,46 @@ function applyF(){
   const from=fv?new Date(fv):null,to=tv?new Date(tv):null;
   if(to)to.setHours(23,59,59);
   const niv=document.getElementById('selNivel').value;
-  // filtRep: sin filtro de nivel (la hoja ya viene pre-filtrada por Classic ≥$25)
-  filtRep=repRaw;
+
+  // Mapa cuenta→fechas desde baseRaw para enriquecer repRaw
+  const fechaMap={};
+  baseRaw.forEach(r=>{if(!fechaMap[r.cuenta])fechaMap[r.cuenta]=[];fechaMap[r.cuenta].push(r.fecha);});
+
+  // filtBase: registros de base dentro del rango y nivel
   filtBase=baseRaw.filter(r=>{
-    if(from&&r.fecha<from)return false;if(to&&r.fecha>to)return false;
-    if(niv&&N(r.nivel)!==N(niv))return false;return true;
+    if(from&&r.fecha<from)return false;
+    if(to&&r.fecha>to)return false;
+    if(niv&&N(r.nivel)!==N(niv))return false;
+    return true;
   });
-  // exitSet: cuentas únicas con validación exitosa en rep — match normalizado
-  exitSet=new Set(filtRep.filter(r=>{const v=N(r.validacion);return v.includes('EXITOSA')||v.includes('CONCRETADA')||v.includes('EXITOSO');}).map(r=>r.cuenta.trim()));
-  const bEx=filtBase.filter(r=>exitSet.has(r.cuenta.trim()));
-  document.getElementById('tb-tot').textContent=filtRep.length;
+
+  // filtRep: todas las alertas; si hay filtro de fecha, solo las cuentas
+  // que tienen al menos un registro de base en ese rango
+  const cuentasEnRango=new Set(filtBase.map(r=>r.cuenta));
+  filtRep=(from||to)
+    ? repRaw.filter(r=>cuentasEnRango.has(r.cuenta)||(from==null&&to==null))
+    : repRaw;
+  if(niv)filtRep=filtRep.filter(r=>N(r.nivel)===N(niv));
+
+  // exitSet: cuentas únicas exitosas (sobre todas las alertas sin filtro de fecha
+  // para que no se pierdan alertas validadas antes del rango)
+  exitSet=new Set(repRaw.filter(r=>{
+    const v=N(r.validacion);
+    return v.includes('EXITOSA')||v.includes('CONCRETADA')||v.includes('EXITOSO');
+  }).map(r=>r.cuenta));
+
+  // Si hay filtro de nivel, restringir exitSet a ese nivel
+  const exitSetFinal=niv
+    ? new Set(repRaw.filter(r=>{const v=N(r.validacion);return(v.includes('EXITOSA')||v.includes('CONCRETADA')||v.includes('EXITOSO'))&&N(r.nivel)===N(niv);}).map(r=>r.cuenta))
+    : exitSet;
+
+  const bEx=filtBase.filter(r=>exitSetFinal.has(r.cuenta));
+
+  document.getElementById('tb-tot').textContent=repRaw.length;
   document.getElementById('tb-exit').textContent=exitSet.size;
   document.getElementById('tb-base').textContent=filtBase.length;
-  renderAll(filtRep,filtBase,bEx);
+  document.getElementById('tb-bex').textContent=bEx.length;
+  renderAll(repRaw,filtBase,bEx);
 }
 function clearF(){document.getElementById('dFrom').value='';document.getElementById('dTo').value='';document.getElementById('selNivel').value='';applyF();}
 
@@ -608,7 +627,7 @@ function renderAll(rep,base,bEx){
   renderP1(rep,base,bEx);
   renderP2(rep);
   renderP3(rep,base,bEx);
-  renderP4(bEx);
+  renderP4(base,bEx);
   renderP5(base,bEx);
   renderP6(rep,base,bEx);
   renderP7(bEx);
@@ -623,35 +642,26 @@ function anim(id,target,d=0,pre='',suf=''){const el=document.getElementById(id);
 
 // ══ P1 ══
 function renderP1(rep,base,bEx){
-  anim('p1-alertas',rep.length);
-  const local=new Set(rep.map(r=>r.cuenta).filter(c=>base.some(b=>b.cuenta===c))).size;
-  anim('p1-local',local);
-  anim('p1-atend',exitSet.size);
-  anim('p1-equip',new Set(rep.map(r=>r.cuenta)).size);
-  anim('p1-provs',new Set(rep.map(r=>r.proveedor)).size);
+  const total=repRaw.length;
+  const exitN=exitSet.size;
+  const noEx=total-exitN;
+  const ef=total?(exitN/total*100):0;
+  anim('p1-alertas',total);
+  anim('p1-noex',noEx);
+  anim('p1-atend',exitN);
+  document.getElementById('p1-efect').textContent=ef.toFixed(1)+'%';
 
   // Validación donut
   dc('valid');
-  const vm={};rep.forEach(r=>{let k=(r.validacion||'Sin dato').trim()||'Sin dato';vm[k]=(vm[k]||0)+1;});
+  const vm={};rep.forEach(r=>{const k=(r.validacion||'Sin dato').trim()||'Sin dato';vm[k]=(vm[k]||0)+1;});
   const ve=Object.entries(vm).sort((a,b)=>b[1]-a[1]);
   chts.valid=new Chart(document.getElementById('c-valid'),{type:'doughnut',data:{labels:ve.map(e=>e[0]),datasets:[{data:ve.map(e=>e[1]),backgroundColor:PAL,borderWidth:0,hoverOffset:6}]},options:doOpts()});
 
-  // Proveedores bar
-  dc('prov');
-  const pm={};rep.forEach(r=>{const k=r.proveedor||'Sin dato';pm[k]=(pm[k]||0)+1;});
-  const ps=Object.entries(pm).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  chts.prov=new Chart(document.getElementById('c-prov'),{type:'bar',data:{labels:ps.map(e=>e[0]),datasets:[{data:ps.map(e=>e[1]),backgroundColor:'rgba(74,127,193,.75)',borderRadius:4,borderSkipped:false}]},options:bOpts(true)});
-
-  // Tabla proveedores
-  const provMap={};
-  rep.forEach(r=>{const k=r.proveedor||'Sin dato';if(!provMap[k])provMap[k]={cnt:0,cuentas:new Set(),apuestas:[]};provMap[k].cnt++;provMap[k].cuentas.add(r.cuenta);if(r.apuesta>0)provMap[k].apuestas.push(r.apuesta);});
-  const total=rep.length;
-  document.getElementById('tProv').innerHTML=Object.entries(provMap).sort((a,b)=>b[1].cnt-a[1].cnt).map(([k,d],i)=>{
-    const avg=d.apuestas.length?d.apuestas.reduce((a,b)=>a+b,0)/d.apuestas.length:0;
-    const pct=(d.cnt/total*100).toFixed(1);
-    const st=i<3?`<span class="badge b-ok">Operando</span>`:`<span class="badge b-op">Activo</span>`;
-    return`<tr><td>${k}</td><td class="mono">${d.cnt}</td><td class="mono">${d.cuentas.size}</td><td class="mono gold">$${avg.toFixed(2)}</td><td class="mono">${pct}%</td><td>${st}</td></tr>`;
-  }).join('');
+  // Criterio bar
+  dc('crit-p1');
+  const cr={};rep.forEach(r=>{const k=(r.criterio||'Sin criterio').trim()||'Sin criterio';cr[k]=(cr[k]||0)+1;});
+  const ce=Object.entries(cr).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  chts['crit-p1']=new Chart(document.getElementById('c-crit-p1'),{type:'bar',data:{labels:ce.map(e=>e[0].length>24?e[0].slice(0,22)+'…':e[0]),datasets:[{data:ce.map(e=>e[1]),backgroundColor:'rgba(74,127,193,.75)',borderRadius:4,borderSkipped:false}]},options:bOpts(true)});
 }
 
 // ══ P2 ══
@@ -716,24 +726,24 @@ function renderP3(rep,base,bEx){
 function filterClientes(){const q=(document.getElementById('srchC').value||'').toLowerCase();tClientesFilt=q?tClientesData.filter(r=>(r.nombre+r.cuenta+r.nivel).toLowerCase().includes(q)):tClientesData;tClientesPage=1;drawClientes();}
 function drawClientes(){
   const page=tClientesFilt.slice((tClientesPage-1)*PG,tClientesPage*PG);
-  document.getElementById('tClientes').innerHTML=page.map(r=>`<tr><td class="mono">${r.cuenta}</td><td>${r.nombre}</td><td>${r.nivel}</td><td class="mono gold">$${r.avgAp.toFixed(2)}</td><td class="mono">${fmtN(r.coin,0)}</td><td class="mono ${r.net>=0?'pos':'neg'}">$${fmtN(r.net,2)}</td><td><span class="badge b-ok">Exitoso</span></td></tr>`).join('');
+  document.getElementById('tClientes').innerHTML=page.map(r=>`<tr><td class="mono">${r.cuenta}</td><td>${r.nombre}</td><td>${r.nivel}</td><td class="mono gold">${r.avgAp>0?"$"+r.avgAp.toFixed(2):"—"}</td><td class="mono">${fmtN(r.coin,0)}</td><td class="mono ${r.net>=0?'pos':'neg'}">$${fmtN(r.net,2)}</td><td><span class="badge b-ok">Exitoso</span></td></tr>`).join('');
   drawPag('pagC',tClientesFilt.length,tClientesPage,p=>{tClientesPage=p;drawClientes();});
 }
 
 // ══ P4 ══
-function renderP4(bEx){
+function renderP4(base,bEx){
   const coinT=bEx.reduce((a,r)=>a+r.coin,0);
   const netT=bEx.reduce((a,r)=>a+r.netwin,0);
   const aps=bEx.map(r=>r.apuesta).filter(v=>v>0);
   const avgAp=aps.length?aps.reduce((a,b)=>a+b,0)/aps.length:0;
-  const jugT=bEx.reduce((a,r)=>a+r.jugadas,0);
   const coinPC=bEx.length?coinT/new Set(bEx.map(r=>r.cuenta)).size:0;
 
   document.getElementById('ib-coin').textContent=fmt(coinT,0);
-  const kn=document.getElementById('ib-net');kn.textContent=(netT<0?'-':'')+'$'+fmt(Math.abs(netT),1);kn.style.color=netT>=0?'var(--pos)':'var(--neg)';
-  document.getElementById('ib-ap').textContent='$'+fmt(avgAp,2);
-  const uniCli=new Set(bEx.map(r=>r.cuenta)).size;
-  document.getElementById('ib-jug').textContent=uniCli;
+  const kn=document.getElementById('ib-net');
+  kn.textContent=(netT<0?'-':'')+'$'+fmt(Math.abs(netT),1);
+  kn.style.color=netT>=0?'var(--pos)':'var(--neg)';
+  document.getElementById('ib-ap').textContent=avgAp>0?'$'+fmt(avgAp,2):'—';
+  document.getElementById('ib-jug').textContent=new Set(bEx.map(r=>r.cuenta)).size;
   document.getElementById('ib-coinpc').textContent=fmt(coinPC,0);
 
   // Coin/mes
@@ -748,29 +758,44 @@ function renderP4(bEx){
 
   // Top coin
   dc('topcoin');
-  const tc={};bEx.forEach(r=>{const k=r.nombre.slice(0,14)||r.cuenta;tc[k]=(tc[k]||0)+r.coin;});
+  const tc={};bEx.forEach(r=>{const k=r.nombre.slice(0,16)||r.cuenta;tc[k]=(tc[k]||0)+r.coin;});
   const top=Object.entries(tc).sort((a,b)=>b[1]-a[1]).slice(0,10);
   chts.topcoin=new Chart(document.getElementById('c-topcoin'),{type:'bar',data:{labels:top.map(e=>e[0]),datasets:[{data:top.map(e=>e[1]),backgroundColor:'rgba(74,127,193,.75)',borderRadius:4,borderSkipped:false}]},options:{...bOpts(true),plugins:{...bOpts().plugins,tooltip:{...bOpts().plugins.tooltip,callbacks:{label:c=>` Coin: ${c.parsed.x.toLocaleString('es-MX')}`}}}}});
 
-  // Tabla mensual
+  // Tabla mensual — clientes únicos por mes desde bEx
+  // bEx = todos los registros de base donde la cuenta está en exitSet
   const mm={};
-  bEx.forEach(r=>{if(!r.fecha)return;const k=r.fecha.getFullYear()+'-'+String(r.fecha.getMonth()+1).padStart(2,'0');if(!mm[k])mm[k]={cli:new Set(),jug:0,coin:0,aps:[],net:0,cnt:0};mm[k].cli.add(r.cuenta);mm[k].jug+=r.jugadas;mm[k].coin+=r.coin;if(r.apuesta>0)mm[k].aps.push(r.apuesta);mm[k].net+=r.netwin;mm[k].cnt++;});
+  bEx.forEach(r=>{
+    if(!r.fecha)return;
+    const k=r.fecha.getFullYear()+'-'+String(r.fecha.getMonth()+1).padStart(2,'0');
+    if(!mm[k])mm[k]={cli:new Set(),coin:0,aps:[],net:0,cnt:0};
+    mm[k].cli.add(r.cuenta);
+    mm[k].coin+=r.coin;
+    if(r.apuesta>0)mm[k].aps.push(r.apuesta);
+    mm[k].net+=r.netwin;
+    mm[k].cnt++;
+  });
   const rows=Object.entries(mm).sort((a,b)=>a[0].localeCompare(b[0]));
-  let tc2=new Set(),tj=0,tco=0,ta=[],tn=0,tcnt=0;
-  bEx.forEach(r=>{tc2.add(r.cuenta);tj+=r.jugadas;tco+=r.coin;if(r.apuesta>0)ta.push(r.apuesta);tn+=r.netwin;tcnt++;});
-  document.getElementById('mBody').innerHTML=rows.map(([k,d])=>{const ap=d.aps.length?d.aps.reduce((a,b)=>a+b,0)/d.aps.length:0;const cp=d.cnt?d.coin/d.cnt:0,np=d.cnt?d.net/d.cnt:0;return`<tr><td>${mlbl(k)}</td><td>${d.cli.size}</td><td class="mono gold">$${fmtN(ap,2)}</td><td>${fmtN(cp,0)}</td><td>${fmtN(d.coin,0)}</td><td class="${d.net>=0?'pos':'neg'}">$${fmtN(d.net,2)}</td><td class="${np>=0?'pos':'neg'}">$${fmtN(np,2)}</td></tr>`;}).join('');
+  let tc2=new Set(),tco=0,ta=[],tn=0,tcnt=0;
+  bEx.forEach(r=>{tc2.add(r.cuenta);tco+=r.coin;if(r.apuesta>0)ta.push(r.apuesta);tn+=r.netwin;tcnt++;});
+  document.getElementById('mBody').innerHTML=rows.map(([k,d])=>{
+    const ap=d.aps.length?d.aps.reduce((a,b)=>a+b,0)/d.aps.length:0;
+    const cp=d.cnt?d.coin/d.cnt:0,np=d.cnt?d.net/d.cnt:0;
+    return`<tr><td>${mlbl(k)}</td><td>${d.cli.size}</td><td class="mono gold">${ap>0?'$'+fmtN(ap,2):'—'}</td><td>${fmtN(cp,0)}</td><td>${fmtN(d.coin,0)}</td><td class="${d.net>=0?'pos':'neg'}">$${fmtN(d.net,2)}</td><td class="${np>=0?'pos':'neg'}">$${fmtN(np,2)}</td></tr>`;
+  }).join('');
   const tav=ta.length?ta.reduce((a,b)=>a+b,0)/ta.length:0,tcp=tcnt?tco/tcnt:0,tnp=tcnt?tn/tcnt:0;
-  document.getElementById('mFoot').innerHTML=`<tr style="font-weight:600;color:var(--white)"><td>TOTAL</td><td>${tc2.size}</td><td class="mono gold">$${fmtN(tav,2)}</td><td>${fmtN(tcp,0)}</td><td>${fmtN(tco,0)}</td><td class="${tn>=0?'pos':'neg'}">$${fmtN(tn,2)}</td><td class="${tnp>=0?'pos':'neg'}">$${fmtN(tnp,2)}</td></tr>`;
+  document.getElementById('mFoot').innerHTML=`<tr style="font-weight:600;color:var(--white)"><td>TOTAL</td><td>${tc2.size}</td><td class="mono gold">${tav>0?'$'+fmtN(tav,2):'—'}</td><td>${fmtN(tcp,0)}</td><td>${fmtN(tco,0)}</td><td class="${tn>=0?'pos':'neg'}">$${fmtN(tn,2)}</td><td class="${tnp>=0?'pos':'neg'}">$${fmtN(tnp,2)}</td></tr>`;
 }
 
 // ══ P5 ══
 function renderP5(base,bEx){
-  const coinTot=base.reduce((a,r)=>a+r.coin,0);
-  const netTot=base.reduce((a,r)=>a+r.netwin,0);
+  // Comparación siempre sobre la base completa (toda la sala)
+  const coinTot=baseRaw.reduce((a,r)=>a+r.coin,0);
+  const netTot=baseRaw.reduce((a,r)=>a+r.netwin,0);
   const coinEx=bEx.reduce((a,r)=>a+r.coin,0);
   const netEx=bEx.reduce((a,r)=>a+r.netwin,0);
-  const pctCoin=coinTot?(coinEx/coinTot*100).toFixed(1):0;
-  const pctNet=coinTot?(Math.abs(netEx)/Math.abs(netTot||1)*100).toFixed(1):0;
+  const pctCoin=coinTot?(coinEx/coinTot*100).toFixed(1):'0.0';
+  const pctNet=Math.abs(netTot)>0?(Math.abs(netEx)/Math.abs(netTot)*100).toFixed(1):'0.0';
 
   document.getElementById('vs-pct-coin').textContent=pctCoin+'%';
   const kn2=document.getElementById('vs-pct-net');kn2.textContent=pctNet+'%';
@@ -813,7 +838,6 @@ function renderP6(rep,base,bEx){
   if(pct>=50)verde.push(`Alta efectividad: ${pct.toFixed(1)}% de alertas concretadas`);
   if(conGes>total*0.6)verde.push(`${(conGes/total*100).toFixed(0)}% de alertas tienen seguimiento documentado`);
   if(pctCoin>20)verde.push(`INTELIA aporta el ${pctCoin.toFixed(1)}% del Coin In total`);
-  verde.push(`${new Set(rep.map(r=>r.proveedor)).size} proveedores activos con cobertura`);
   if(exit>0)verde.push(`${exit} clientes exitosamente atendidos y registrados`);
   if(verde.length===0)verde.push('Acumulando datos para generar hallazgos…');
 
@@ -899,12 +923,13 @@ function renderP7(bEx){
 function filterEv(){const q=(document.getElementById('srchEv').value||'').toLowerCase();tEvFilt=q?tEvData.filter(r=>(r.nombre+r.cuenta+r.nivel+r.fechaStr).toLowerCase().includes(q)):tEvData;tEvPage=1;drawEv();}
 function drawEv(){
   const page=tEvFilt.slice((tEvPage-1)*PG,tEvPage*PG);
-  // Calcular apuesta media por cuenta en el set completo
-  const apMap={};tEvData.forEach(r=>{if(!apMap[r.cuenta])apMap[r.cuenta]=[];if(r.apuesta>0)apMap[r.cuenta].push(r.apuesta);});
+  // Apuesta media por cuenta sobre el set completo actual
+  const apMap={};
+  tEvFilt.forEach(r=>{if(!apMap[r.cuenta])apMap[r.cuenta]=[];if(r.apuesta>0)apMap[r.cuenta].push(r.apuesta);});
   document.getElementById('tEv').innerHTML=page.map(r=>{
     const aps=apMap[r.cuenta]||[];
     const med=aps.length?aps.reduce((a,b)=>a+b,0)/aps.length:r.apuesta;
-    return`<tr><td class="mono">${r.fechaStr}</td><td class="mono">${r.cuenta}</td><td>${r.nombre}</td><td>${r.nivel}</td><td class="mono gold">$${med.toFixed(2)}</td><td class="mono">${fmtN(r.coin,0)}</td><td class="mono">$${r.apuesta.toFixed(2)}</td><td class="mono ${r.netwin>=0?'pos':'neg'}">$${fmtN(r.netwin,2)}</td></tr>`;
+    return`<tr><td class="mono">${r.fechaStr}</td><td class="mono">${r.cuenta}</td><td>${r.nombre}</td><td>${r.nivel}</td><td class="mono gold">${med>0?'$'+med.toFixed(2):'—'}</td><td class="mono">${fmtN(r.coin,0)}</td><td class="mono">$${r.apuesta.toFixed(2)}</td><td class="mono ${r.netwin>=0?'pos':'neg'}">$${fmtN(r.netwin,2)}</td></tr>`;
   }).join('');
   drawPag('pagEv',tEvFilt.length,tEvPage,p=>{tEvPage=p;drawEv();});
 }
