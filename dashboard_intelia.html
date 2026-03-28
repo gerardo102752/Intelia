@@ -308,7 +308,7 @@ tbody td{padding:7px 11px;color:var(--text);}
       <div class="cbox" style="height:220px"><canvas id="c-apmes"></canvas></div>
     </div>
     <div class="card">
-      <div class="sec">Efectividad por Proveedor</div>
+      <div class="sec">Efectividad por Nivel</div>
       <div class="cbox" style="height:220px"><canvas id="c-efprov"></canvas></div>
     </div>
   </div>
@@ -391,9 +391,9 @@ tbody td{padding:7px 11px;color:var(--text);}
   </div>
 
   <div class="card">
-    <div class="sec">Ranking por Proveedor — Coin In y Netwin</div>
+    <div class="sec">Ranking por Nivel — Coin In y Netwin</div>
     <div class="twrap">
-      <table><thead><tr><th>#</th><th>Proveedor</th><th>Clientes Exitosos</th><th>Coin Total</th><th>Netwin Total</th><th>Apuesta Prom.</th><th>% Coin vs Base</th></tr></thead>
+      <table><thead><tr><th>#</th><th>Nivel</th><th>Clientes Exitosos</th><th>Coin Total</th><th>Netwin Total</th><th>Apuesta Prom.</th><th>% Coin vs Base</th></tr></thead>
       <tbody id="tRanking"></tbody></table>
     </div>
   </div>
@@ -480,11 +480,11 @@ tbody td{padding:7px 11px;color:var(--text);}
 
   <div class="g2">
     <div class="card">
-      <div class="sec">Tendencia Mensual — Coin In</div>
+      <div class="sec">Coin In por Mes — Clientes Exitosos</div>
       <div class="cbox" style="height:210px"><canvas id="c-tend-coin"></canvas></div>
     </div>
     <div class="card">
-      <div class="sec">Tendencia Mensual — Efectividad %</div>
+      <div class="sec">Clientes Únicos Exitosos por Mes</div>
       <div class="cbox" style="height:210px"><canvas id="c-tend-efect"></canvas></div>
     </div>
   </div>
@@ -526,6 +526,7 @@ const PG=15;
 function parseCSV(txt){const l=txt.split('\n');if(l.length<2)return{h:[],rows:[]};const h=parseLine(l[0]).map(s=>s.trim());const rows=[];for(let i=1;i<l.length;i++)if(l[i].trim())rows.push(parseLine(l[i]));return{h,rows};}
 function parseLine(l){const r=[];let c='',q=false;for(const ch of l){if(ch==='"')q=!q;else if(ch===','&&!q){r.push(c.trim());c='';}else c+=ch;}r.push(c.trim());return r;}
 function N(s){return(s||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();}
+function isExitosa(v){const u=N(v);if(u.includes('NO EXITOSA')||u.includes('NO EXITOSO')||u.startsWith('NO '))return false;return u==='EXITOSA'||u==='EXITOSO'||u==='CONCRETADA'||u==='EXITOSO';}
 function ci(h,k){const K=N(k);let i=h.findIndex(x=>N(x)===K);if(i>=0)return i;return h.findIndex(x=>N(x).includes(K)||K.includes(N(x)));}
 function pn(v){const n=parseFloat((v||'').toString().replace(/[^0-9.\-]/g,''));return isNaN(n)?0:n;}
 function fmt(n,d=0){if(n===null||n===undefined)return'—';const a=Math.abs(n);let s;if(a>=1e6)s=(n/1e6).toFixed(1)+'M';else if(a>=1e3)s=(n/1e3).toFixed(1)+'K';else s=n.toFixed(d);return s;}
@@ -580,11 +581,7 @@ function applyF(){
   if(to)to.setHours(23,59,59);
   const niv=document.getElementById('selNivel').value;
 
-  // Mapa cuenta→fechas desde baseRaw para enriquecer repRaw
-  const fechaMap={};
-  baseRaw.forEach(r=>{if(!fechaMap[r.cuenta])fechaMap[r.cuenta]=[];fechaMap[r.cuenta].push(r.fecha);});
-
-  // filtBase: registros de base dentro del rango y nivel
+  // filtBase: solo registros de base en el rango de fechas y nivel
   filtBase=baseRaw.filter(r=>{
     if(from&&r.fecha<from)return false;
     if(to&&r.fecha>to)return false;
@@ -592,33 +589,20 @@ function applyF(){
     return true;
   });
 
-  // filtRep: todas las alertas; si hay filtro de fecha, solo las cuentas
-  // que tienen al menos un registro de base en ese rango
-  const cuentasEnRango=new Set(filtBase.map(r=>r.cuenta));
-  filtRep=(from||to)
-    ? repRaw.filter(r=>cuentasEnRango.has(r.cuenta)||(from==null&&to==null))
-    : repRaw;
-  if(niv)filtRep=filtRep.filter(r=>N(r.nivel)===N(niv));
+  // filtRep: SIEMPRE todas las alertas (la hoja de reportes no tiene fecha)
+  filtRep=niv?repRaw.filter(r=>N(r.nivel)===N(niv)):repRaw;
 
-  // exitSet: cuentas únicas exitosas (sobre todas las alertas sin filtro de fecha
-  // para que no se pierdan alertas validadas antes del rango)
-  exitSet=new Set(repRaw.filter(r=>{
-    const v=N(r.validacion);
-    return v.includes('EXITOSA')||v.includes('CONCRETADA')||v.includes('EXITOSO');
-  }).map(r=>r.cuenta));
+  // exitSet: cuentas con validación EXACTAMENTE exitosa (no "NO EXITOSA")
+  exitSet=new Set(filtRep.filter(r=>isExitosa(r.validacion)).map(r=>r.cuenta));
 
-  // Si hay filtro de nivel, restringir exitSet a ese nivel
-  const exitSetFinal=niv
-    ? new Set(repRaw.filter(r=>{const v=N(r.validacion);return(v.includes('EXITOSA')||v.includes('CONCRETADA')||v.includes('EXITOSO'))&&N(r.nivel)===N(niv);}).map(r=>r.cuenta))
-    : exitSet;
+  // bEx: registros de base (con fecha) cuya cuenta está en exitSet
+  const bEx=filtBase.filter(r=>exitSet.has(r.cuenta));
 
-  const bEx=filtBase.filter(r=>exitSetFinal.has(r.cuenta));
-
-  document.getElementById('tb-tot').textContent=repRaw.length;
+  document.getElementById('tb-tot').textContent=filtRep.length;
   document.getElementById('tb-exit').textContent=exitSet.size;
   document.getElementById('tb-base').textContent=filtBase.length;
   document.getElementById('tb-bex').textContent=bEx.length;
-  renderAll(repRaw,filtBase,bEx);
+  renderAll(filtRep,filtBase,bEx);
 }
 function clearF(){document.getElementById('dFrom').value='';document.getElementById('dTo').value='';document.getElementById('selNivel').value='';applyF();}
 
@@ -637,7 +621,7 @@ function renderAll(rep,base,bEx){
 const bOpts=(h=false)=>({indexAxis:h?'y':'x',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c2333',borderColor:'#2c3a52',borderWidth:1,titleColor:'#d4dae8',bodyColor:'#8a96b0'}},scales:{x:{grid:{color:'rgba(44,58,82,.35)'},ticks:{color:'#8a96b0',font:{size:10}},border:{display:false}},y:{grid:{color:'rgba(44,58,82,.35)'},ticks:{color:'#8a96b0',font:{size:10}},border:{display:false}}}});
 const doOpts=()=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#8a96b0',font:{size:10},padding:8,boxWidth:10}},tooltip:{backgroundColor:'#1c2333',borderColor:'#2c3a52',borderWidth:1,titleColor:'#d4dae8',bodyColor:'#8a96b0'}}});
 function dc(id){if(chts[id]){chts[id].destroy();delete chts[id];}}
-function bv(v){const u=N(v);if(u.includes('EXITOSA')||u.includes('CONCRETADA')||u.includes('EXITOSO'))return`<span class="badge b-ok">${v||'—'}</span>`;if(u.includes('FALLIDA')||u.includes('NO CUMPLE'))return`<span class="badge b-no">${v||'—'}</span>`;if(u.includes('PENDIENTE')||u.includes('EN PROCESO'))return`<span class="badge b-pend">${v||'—'}</span>`;return`<span class="badge b-neu">${v||'Sin dato'}</span>`;}
+function bv(v){if(isExitosa(v))return`<span class="badge b-ok">${v||'—'}</span>`;const u=N(v);if(u.includes('FALLIDA')||u.includes('NO CUMPLE')||u.includes('NO EXITOSA')||u.includes('NO EXITOSO'))return`<span class="badge b-no">${v||'—'}</span>`;if(u.includes('PENDIENTE')||u.includes('EN PROCESO'))return`<span class="badge b-pend">${v||'—'}</span>`;return`<span class="badge b-neu">${v||'Sin dato'}</span>`;}
 function anim(id,target,d=0,pre='',suf=''){const el=document.getElementById(id);if(!el)return;const dur=700,s=performance.now();(function f(n){const p=Math.min((n-s)/dur,1),e=1-Math.pow(1-p,3);el.textContent=pre+fmt(e*target,d)+suf;if(p<1)requestAnimationFrame(f);})(s);}
 
 // ══ P1 ══
@@ -651,11 +635,12 @@ function renderP1(rep,base,bEx){
   anim('p1-atend',exitN);
   document.getElementById('p1-efect').textContent=ef.toFixed(1)+'%';
 
-  // Validación donut
+  // Donut: Exitosa vs No exitosa (binario claro)
   dc('valid');
-  const vm={};rep.forEach(r=>{const k=(r.validacion||'Sin dato').trim()||'Sin dato';vm[k]=(vm[k]||0)+1;});
-  const ve=Object.entries(vm).sort((a,b)=>b[1]-a[1]);
-  chts.valid=new Chart(document.getElementById('c-valid'),{type:'doughnut',data:{labels:ve.map(e=>e[0]),datasets:[{data:ve.map(e=>e[1]),backgroundColor:PAL,borderWidth:0,hoverOffset:6}]},options:doOpts()});
+  chts.valid=new Chart(document.getElementById('c-valid'),{type:'doughnut',
+    data:{labels:['NO EXITOSA','EXITOSA'],
+    datasets:[{data:[noEx,exitN],backgroundColor:['#4a7fc1','#3a9e6f'],borderWidth:0,hoverOffset:6}]},
+    options:doOpts()});
 
   // Criterio bar
   dc('crit-p1');
@@ -669,22 +654,25 @@ function renderP2(rep){
   const noVal=rep.filter(r=>!r.validacion.trim()).length;
   const pend=rep.filter(r=>{const v=N(r.validacion);return v.includes('PENDIENTE')||v.includes('EN PROCESO');}).length;
   const fall=rep.filter(r=>{const v=N(r.validacion);return v.includes('FALLIDA')||v.includes('NO CUMPLE');}).length;
-  const exit=rep.filter(r=>{const v=N(r.validacion);return v.includes('EXITOSA')||v.includes('CONCRETADA')||v.includes('EXITOSO');}).length;
+  const exit=rep.filter(r=>isExitosa(r.validacion)).length;
+  const noEx=rep.filter(r=>!isExitosa(r.validacion)).length;
   anim('f-sinval',noVal);anim('f-pend',pend);anim('f-fall',fall);
   document.getElementById('f-res').textContent=(rep.length?((exit/rep.length)*100).toFixed(1):0)+'%';
 
   dc('fallas');
-  const vm={};rep.forEach(r=>{let k=(r.validacion||'Sin dato').trim()||'Sin dato';vm[k]=(vm[k]||0)+1;});
-  const ve=Object.entries(vm).sort((a,b)=>b[1]-a[1]);
-  chts.fallas=new Chart(document.getElementById('c-fallas'),{type:'doughnut',data:{labels:ve.map(e=>e[0]),datasets:[{data:ve.map(e=>e[1]),backgroundColor:PAL,borderWidth:0,hoverOffset:6}]},options:doOpts()});
+  // Donut simple: Exitosa vs No exitosa
+  chts.fallas=new Chart(document.getElementById('c-fallas'),{type:'doughnut',
+    data:{labels:['NO EXITOSA','EXITOSA'],
+    datasets:[{data:[noEx,exit],backgroundColor:['#4a7fc1','#3a9e6f'],borderWidth:0,hoverOffset:6}]},
+    options:doOpts()});
 
   dc('criterio');
   const cr={};rep.forEach(r=>{let k=(r.criterio||'Sin criterio').trim()||'Sin criterio';cr[k]=(cr[k]||0)+1;});
   const ce=Object.entries(cr).sort((a,b)=>b[1]-a[1]).slice(0,8);
   chts.criterio=new Chart(document.getElementById('c-criterio'),{type:'bar',data:{labels:ce.map(e=>e[0].length>22?e[0].slice(0,20)+'…':e[0]),datasets:[{data:ce.map(e=>e[1]),backgroundColor:'rgba(201,168,76,.75)',borderRadius:4,borderSkipped:false}]},options:bOpts(true)});
 
-  // tabla fallas (no exitosas)
-  tFallasData=rep.filter(r=>{const v=N(r.validacion);return !v.includes('EXITOSA')&&!v.includes('CONCRETADA')&&!v.includes('EXITOSO');});
+  // tabla fallas (no exitosas exactamente)
+  tFallasData=rep.filter(r=>!isExitosa(r.validacion));
   tFallasFilt=tFallasData;tFallasPage=1;drawFallas();
 }
 
@@ -710,11 +698,11 @@ function renderP3(rep,base,bEx){
   const ap=byMonth(bEx,r=>r.apuesta).map(([k,v])=>{const f=v.filter(x=>x>0);return{k,v:f.length?f.reduce((a,b)=>a+b,0)/f.length:0};});
   chts.apmes=new Chart(document.getElementById('c-apmes'),{type:'line',data:{labels:ap.map(e=>mlbl(e.k)),datasets:[{data:ap.map(e=>+e.v.toFixed(2)),borderColor:'#4a7fc1',backgroundColor:'rgba(74,127,193,.1)',fill:true,tension:.35,pointBackgroundColor:'#4a7fc1',pointRadius:4,pointHoverRadius:6}]},options:{...bOpts(),plugins:{...bOpts().plugins,tooltip:{...bOpts().plugins.tooltip,callbacks:{label:c=>` $${c.parsed.y.toFixed(2)}`}}}}});
 
-  // Efectividad por proveedor
+  // Efectividad por nivel (antes "por proveedor")
   dc('efprov');
   const pmap={};
-  rep.forEach(r=>{const k=r.proveedor||'Sin dato';if(!pmap[k])pmap[k]={tot:0,exit:0};pmap[k].tot++;const v=N(r.validacion);if(v.includes('EXITOSA')||v.includes('CONCRETADA')||v.includes('EXITOSO'))pmap[k].exit++;});
-  const pe=Object.entries(pmap).map(([k,d])=>({k,pct:d.tot?+(d.exit/d.tot*100).toFixed(1):0})).sort((a,b)=>b.pct-a.pct).slice(0,8);
+  rep.forEach(r=>{const k=r.nivel||'Sin nivel';if(!pmap[k])pmap[k]={tot:0,exit:0};pmap[k].tot++;if(isExitosa(r.validacion))pmap[k].exit++;});
+  const pe=Object.entries(pmap).map(([k,d])=>({k,pct:d.tot?+(d.exit/d.tot*100).toFixed(1):0})).sort((a,b)=>b.pct-a.pct);
   chts.efprov=new Chart(document.getElementById('c-efprov'),{type:'bar',data:{labels:pe.map(e=>e.k),datasets:[{data:pe.map(e=>e.pct),backgroundColor:'rgba(58,158,111,.75)',borderRadius:4,borderSkipped:false}]},options:{...bOpts(true),plugins:{...bOpts().plugins,tooltip:{...bOpts().plugins.tooltip,callbacks:{label:c=>` ${c.parsed.x}%`}}}}});
 
   // Tabla top clientes
@@ -824,14 +812,18 @@ function renderP5(base,bEx){
 
 // ══ P6 ══
 function renderP6(rep,base,bEx){
-  const total=rep.length,exit=exitSet.size;
+  const total=rep.length;
+  const exit=exitSet.size;
+  const noEx=total-exit;
   const pct=total?(exit/total*100):0;
   const noGes=rep.filter(r=>!r.comentario.trim()&&!r.criterio.trim()).length;
   const conGes=total-noGes;
   const coinEx=bEx.reduce((a,r)=>a+r.coin,0);
-  const coinTot=base.reduce((a,r)=>a+r.coin,0);
+  const coinTot=baseRaw.reduce((a,r)=>a+r.coin,0);
   const pctCoin=coinTot?(coinEx/coinTot*100):0;
   const netEx=bEx.reduce((a,r)=>a+r.netwin,0);
+  const noVal=rep.filter(r=>!r.validacion.trim()).length;
+  const fall=rep.filter(r=>{const v=N(r.validacion);return v.includes('FALLIDA')||v.includes('NO CUMPLE');}).length;
 
   // Hallazgos verdes
   const verde=[];
@@ -844,10 +836,8 @@ function renderP6(rep,base,bEx){
   // Hallazgos rojos
   const rojo=[];
   if(pct<40)rojo.push(`Efectividad baja: solo ${pct.toFixed(1)}% de alertas exitosas`);
-  const noVal=rep.filter(r=>!r.validacion.trim()).length;
   if(noVal>0)rojo.push(`${noVal} alertas sin validación registrada`);
   if(noGes>total*0.3)rojo.push(`${(noGes/total*100).toFixed(0)}% de alertas sin comentario ni criterio`);
-  const fall=rep.filter(r=>{const v=N(r.validacion);return v.includes('FALLIDA')||v.includes('NO CUMPLE');}).length;
   if(fall>0)rojo.push(`${fall} gestiones fallidas o que no cumplen`);
   if(netEx<0)rojo.push(`Netwin negativo en clientes exitosos: $${fmtN(netEx,0)}`);
   if(rojo.length===0)rojo.push('Sin riesgos críticos detectados en este período');
@@ -894,28 +884,32 @@ function renderP6(rep,base,bEx){
 
 // ══ P7 ══
 function renderP7(bEx){
-  const coinMes=byMonth(bEx,r=>r.coin).map(([k,v])=>({k,v:v.reduce((a,b)=>a+b,0)}));
   const total=filtRep.length,exit=exitSet.size;
   const pct=total?(exit/total*100):0;
-
-  // Tendencia coin
-  dc('tend-coin');
-  chts['tend-coin']=new Chart(document.getElementById('c-tend-coin'),{type:'line',data:{labels:coinMes.map(e=>mlbl(e.k)),datasets:[{data:coinMes.map(e=>e.v),borderColor:'#c9a84c',backgroundColor:'rgba(201,168,76,.1)',fill:true,tension:.35,pointBackgroundColor:'#c9a84c',pointRadius:4}]},options:{...bOpts(),plugins:{...bOpts().plugins,tooltip:{...bOpts().plugins.tooltip,callbacks:{label:c=>` Coin: ${c.parsed.y.toLocaleString('es-MX')}`}}}}});
-
-  // Tendencia efectividad por mes (usando rep)
-  const efMes={};
-  filtRep.forEach(r=>{});// placeholder — usamos base por mes
-  const mEf=byMonth(bEx,r=>1).map(([k,v])=>({k,v:v.length}));
-  dc('tend-efect');
-  chts['tend-efect']=new Chart(document.getElementById('c-tend-efect'),{type:'line',data:{labels:mEf.map(e=>mlbl(e.k)),datasets:[{data:mEf.map(e=>e.v),borderColor:'#3a9e6f',backgroundColor:'rgba(58,158,111,.1)',fill:true,tension:.35,pointBackgroundColor:'#3a9e6f',pointRadius:4}]},options:{...bOpts(),plugins:{...bOpts().plugins,tooltip:{...bOpts().plugins.tooltip,callbacks:{label:c=>` Clientes exitosos: ${c.parsed.y}`}}}}});
-
-  // Pasos
   const noVal=filtRep.filter(r=>!r.validacion.trim()).length;
-  document.getElementById('ev-corto').textContent=`1. Completar los ${noVal} registros sin validación.\n2. Estandarizar comentario de gestión en proceso operativo.\n3. Revisión semanal de alertas pendientes con gestores.`;
-  document.getElementById('ev-medio').textContent=`1. Ampliar cobertura a más proveedores y niveles.\n2. Automatizar alertas de seguimiento para casos pendientes.\n3. Integrar comparativo vs promedio histórico de sala.`;
+
+  // Coin total por mes — solo datos reales de bEx
+  dc('tend-coin');
+  const coinMes=byMonth(bEx,r=>r.coin).map(([k,v])=>({k,v:v.reduce((a,b)=>a+b,0)}));
+  chts['tend-coin']=new Chart(document.getElementById('c-tend-coin'),{type:'bar',
+    data:{labels:coinMes.map(e=>mlbl(e.k)),
+    datasets:[{data:coinMes.map(e=>e.v),backgroundColor:'rgba(201,168,76,.75)',borderRadius:4,borderSkipped:false}]},
+    options:{...bOpts(),plugins:{...bOpts().plugins,tooltip:{...bOpts().plugins.tooltip,callbacks:{label:c=>` Coin: ${c.parsed.y.toLocaleString('es-MX')}`}}}}});
+
+  // Clientes únicos exitosos por mes — solo datos reales
+  dc('tend-efect');
+  const cliMes=byMonth(bEx,r=>r.cuenta).map(([k,v])=>({k,v:new Set(v).size}));
+  chts['tend-efect']=new Chart(document.getElementById('c-tend-efect'),{type:'bar',
+    data:{labels:cliMes.map(e=>mlbl(e.k)),
+    datasets:[{data:cliMes.map(e=>e.v),backgroundColor:'rgba(58,158,111,.75)',borderRadius:4,borderSkipped:false}]},
+    options:{...bOpts(),plugins:{...bOpts().plugins,tooltip:{...bOpts().plugins.tooltip,callbacks:{label:c=>` ${c.parsed.y} clientes`}}}}});
+
+  // Pasos estratégicos
+  document.getElementById('ev-corto').textContent=`1. Completar los ${noVal} registros sin validación.\n2. Estandarizar comentario de gestión en el proceso operativo.\n3. Revisión semanal de alertas pendientes con gestores.`;
+  document.getElementById('ev-medio').textContent=`1. Ampliar cobertura a más niveles de cliente.\n2. Automatizar alertas de seguimiento para casos pendientes.\n3. Integrar comparativo vs promedio histórico de sala.`;
   document.getElementById('ev-rec').textContent=`• Meta de efectividad ≥60% por período.\n• SLA de respuesta: máx. 24h por alerta generada.\n• Revisar umbrales de Apuesta según resultados acumulados.`;
 
-  // Tabla detalle exitosos
+  // Tabla detalle: registros de base de clientes exitosos
   tEvData=bEx;tEvFilt=bEx;tEvPage=1;
   document.getElementById('ev-count').textContent=bEx.length+' registros exitosos';
   drawEv();
