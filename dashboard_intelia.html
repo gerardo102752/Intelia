@@ -175,10 +175,46 @@ tbody td{padding:7px 11px;color:var(--text);}
 
 @media(max-width:1200px){.g5{grid-template-columns:repeat(3,1fr);}.g4{grid-template-columns:repeat(2,1fr);}.hall-grid,.conclusion-grid,.paso-grid{grid-template-columns:1fr;}.g-wide{grid-template-columns:1fr;}.g3{grid-template-columns:1fr 1fr;}}
 @media(max-width:750px){main{padding:12px;}.g2,.g3,.g4,.g5{grid-template-columns:1fr;}}
+
+/* ── LOGIN ── */
+#loginScreen{position:fixed;inset:0;background:var(--bg);z-index:1000;display:flex;align-items:center;justify-content:center;}
+#loginScreen.hide{display:none;}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:40px 44px;width:340px;display:flex;flex-direction:column;align-items:center;gap:20px;box-shadow:0 8px 40px rgba(0,0,0,.5);}
+.login-logo{width:48px;height:48px;background:var(--accent);border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:16px;color:#fff;letter-spacing:1px;}
+.login-title{font-size:16px;font-weight:700;color:var(--white);text-align:center;}
+.login-sub{font-size:12px;color:var(--text2);text-align:center;margin-top:-12px;}
+.login-field{width:100%;display:flex;flex-direction:column;gap:6px;}
+.login-field label{font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--text2);}
+.login-field input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;color:var(--white);font-size:13px;font-family:'Inter',sans-serif;outline:none;transition:border-color .15s;}
+.login-field input:focus{border-color:var(--accent);}
+.login-btn{width:100%;background:var(--accent);border:none;border-radius:var(--r);padding:11px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:background .15s;}
+.login-btn:hover{background:var(--accent2);}
+.login-err{font-size:12px;color:#d07070;text-align:center;min-height:16px;}
+.login-shake{animation:shake .4s ease;}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
 </style>
 </head>
 <body>
 
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">IN</div>
+    <div class="login-title">INTELIA</div>
+    <div class="login-sub">Dashboard Ejecutivo · Acceso restringido</div>
+    <div class="login-field">
+      <label>Usuario</label>
+      <input type="text" id="loginUser" placeholder="usuario" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-field">
+      <label>Contraseña</label>
+      <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-err" id="loginErr"></div>
+    <button class="login-btn" onclick="doLogin()">Ingresar</button>
+  </div>
+</div>
 <div id="loader"><div class="spin"></div><div style="font-size:12px;color:#8a96b0;letter-spacing:1px;">Cargando datos INTELIA…</div></div>
 
 <!-- HEADER -->
@@ -509,8 +545,40 @@ tbody td{padding:7px 11px;color:var(--text);}
 // ═══════════════════════════════════════════════
 // Conexión segura via Apps Script — la hoja puede ser privada
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycby4ANcDxZ5GrksYfYx3zh90OpVkbjtNfG-JJX9mAwlf_ATf4SbJIuFPMP6q3ZtTuLMe/exec';
-const TOKEN='INTELIA2026';
+const TOKEN='Nx7#mK2$pQ9vRw4Z';
 const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+// ── LOGIN ──
+// Credenciales de acceso al dashboard
+const USERS={"gerardo":"Casino2026!","juandavid":"Intelia#99"};
+const SESSION_KEY="intelia_auth";
+
+function doLogin(){
+  const u=(document.getElementById("loginUser").value||"").trim().toLowerCase();
+  const p=document.getElementById("loginPass").value||"";
+  const errEl=document.getElementById("loginErr");
+  const box=document.querySelector(".login-box");
+  if(USERS[u]&&USERS[u]===p){
+    sessionStorage.setItem(SESSION_KEY,"1");
+    document.getElementById("loginScreen").classList.add("hide");
+    errEl.textContent="";
+    loadAll();
+  } else {
+    errEl.textContent="Usuario o contraseña incorrectos";
+    box.classList.remove("login-shake");
+    void box.offsetWidth;
+    box.classList.add("login-shake");
+    document.getElementById("loginPass").value="";
+  }
+}
+
+function checkSession(){
+  if(sessionStorage.getItem(SESSION_KEY)==="1"){
+    document.getElementById("loginScreen").classList.add("hide");
+    loadAll();
+  }
+}
+
 const PAL=['#4a7fc1','#3a9e6f','#c9a84c','#8e6bbf','#b94a4a','#5a9ab5','#7a9e4a','#b56b3a','#c94a7a','#4a9e9e'];
 
 let repRaw=[],baseRaw=[],exitSet=new Set();
@@ -987,7 +1055,7 @@ function showErr(m){const b=document.getElementById('errBar');b.textContent=m;b.
 function hideErr(){document.getElementById('errBar').classList.remove('show');}
 
 Chart.defaults.color='#8a96b0';Chart.defaults.font.family='Inter';
-loadAll();
+checkSession();
 setInterval(loadAll,5*60*1000);
 </script>
 </body>
