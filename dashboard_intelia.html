@@ -507,9 +507,9 @@ tbody td{padding:7px 11px;color:var(--text);}
 
 <script>
 // ═══════════════════════════════════════════════
-const SID='1X9mnO95DconHOQptEzUyIp9gB223YRDH';
-const GID_REP='642469961',GID_BASE='869158085';
-const CSV=g=>`https://docs.google.com/spreadsheets/d/${SID}/export?format=csv&gid=${g}&t=`;
+// Conexión segura via Apps Script — la hoja puede ser privada
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby4ANcDxZ5GrksYfYx3zh90OpVkbjtNfG-JJX9mAwlf_ATf4SbJIuFPMP6q3ZtTuLMe/exec';
+const TOKEN='INTELIA2026';
 const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const PAL=['#4a7fc1','#3a9e6f','#c9a84c','#8e6bbf','#b94a4a','#5a9ab5','#7a9e4a','#b56b3a','#c94a7a','#4a9e9e'];
 
@@ -557,12 +557,23 @@ function byMonth(data,fn){const m={};data.forEach(r=>{if(!r.fecha)return;const k
 function lastNMonths(data,fn,n=3){const all=byMonth(data,fn);return all.slice(-n);}
 
 // ── LOAD ──
+async function cargarHoja(hoja){
+  const url=`${SCRIPT_URL}?token=${TOKEN}&hoja=${hoja}&t=${Date.now()}`;
+  const resp=await fetch(url);
+  if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
+  const json=await resp.json();
+  if(json.error)throw new Error(json.error);
+  const h=json.encabezados;
+  const rows=json.datos.map(obj=>h.map(k=>obj[k]!==undefined?String(obj[k]):''));
+  return{h,rows};
+}
+
 async function loadAll(){
   const btn=document.getElementById('btnRef');btn.classList.add('spinning');hideErr();
   try{
-    const[t1,t2]=await Promise.all([fetch(CSV(GID_REP)+Date.now()).then(r=>r.text()),fetch(CSV(GID_BASE)+Date.now()).then(r=>r.text())]);
-    repRaw=buildRep(parseCSV(t1));
-    baseRaw=buildBase(parseCSV(t2));
+    const[r1,r2]=await Promise.all([cargarHoja('alertas'),cargarHoja('base')]);
+    repRaw=buildRep(r1);
+    baseRaw=buildBase(r2);
     applyF();
     document.getElementById('lastUpd').textContent='Actualizado: '+new Date().toLocaleString('es-MX');
     document.getElementById('loader').classList.add('hide');
