@@ -627,7 +627,7 @@ function lastNMonths(data,fn,n=3){const all=byMonth(data,fn);return all.slice(-n
 // ── LOAD ──
 async function cargarHoja(hoja){
   const url=`${SCRIPT_URL}?token=${TOKEN}&hoja=${hoja}&t=${Date.now()}`;
-  const resp=await fetch(url);
+  const resp=await fetch(url, {redirect: 'follow', mode: 'cors'});
   if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
   const json=await resp.json();
   if(json.error)throw new Error(json.error);
