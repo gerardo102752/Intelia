@@ -626,13 +626,14 @@ function lastNMonths(data,fn,n=3){const all=byMonth(data,fn);return all.slice(-n
 
 // ── LOAD ──
 async function cargarHoja(hoja){
-  const url=`${SCRIPT_URL}?token=${TOKEN}&hoja=${hoja}&t=${Date.now()}`;
-  const resp=await fetch(url, {redirect: 'follow', mode: 'cors'});
+  const scriptUrl=`${SCRIPT_URL}?token=${TOKEN}&hoja=${hoja}&t=${Date.now()}`;
+  const proxyUrl=`https://corsproxy.io/?${encodeURIComponent(scriptUrl)}`;
+  const resp=await fetch(proxyUrl);
   if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
   const json=await resp.json();
   if(json.error)throw new Error(json.error);
   const h=json.encabezados;
-  const rows=json.datos.map(obj=>h.map(k=>obj[k]!==undefined?String(obj[k]):''));
+  const rows=json.datos.map(obj=>h.map(k=>obj[k]!==undefined?String(obj[k]):""));
   return{h,rows};
 }
 
