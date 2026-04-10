@@ -519,7 +519,11 @@ tbody td{padding:7px 11px;color:var(--text);}
 // ═══════════════════════════════════════════════
 const SID='1X9mnO95DconHOQptEzUyIp9gB223YRDH';
 const GID_REP='642469961',GID_BASE='869158085';
-const CSV=g=>`https://docs.google.com/spreadsheets/d/${SID}/export?format=csv&gid=${g}&t=`;
+// Usa allorigins como proxy CORS para evitar bloqueo desde GitHub Pages
+const CSV=g=>{
+  const url=`https://docs.google.com/spreadsheets/d/${SID}/export?format=csv&gid=${g}&t=${Date.now()}`;
+  return`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+};
 const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const PAL=['#4a7fc1','#3a9e6f','#c9a84c','#8e6bbf','#b94a4a','#5a9ab5','#7a9e4a','#b56b3a','#c94a7a','#4a9e9e'];
 
@@ -549,7 +553,7 @@ function byMonth(data,fn){const m={};data.forEach(r=>{if(!r.fecha)return;const k
 async function loadAll(){
   const btn=document.getElementById('btnRef');btn.classList.add('spinning');hideErr();
   try{
-    const[t1,t2]=await Promise.all([fetch(CSV(GID_REP)+Date.now()).then(r=>r.text()),fetch(CSV(GID_BASE)+Date.now()).then(r=>r.text())]);
+    const[t1,t2]=await Promise.all([fetch(CSV(GID_REP)).then(r=>r.text()),fetch(CSV(GID_BASE)).then(r=>r.text())]);
     repRaw=buildRep(parseCSV(t1));
     baseRaw=buildBase(parseCSV(t2));
     applyF();
